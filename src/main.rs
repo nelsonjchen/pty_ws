@@ -1,5 +1,8 @@
 #[macro_use]
 extern crate rouille;
+extern crate nix;
+extern crate nix_ptsname_r_shim;
+extern crate multiqueue;
 
 use std::{thread, time};
 
@@ -7,8 +10,11 @@ use rouille::websocket;
 use rouille::Response;
 
 fn main() {
+    let (send, recv) = multiqueue::mpmc_queue(10);
+
     println!("Now listening on 127.0.0.1:8000");
     rouille::start_server("127.0.0.1:8000", move |request| {
+        recv;
         router!(request,
             (GET) (/) => {
                 Response::empty_404()
