@@ -1,0 +1,9 @@
+[package]
+authors = ["Nelson Chen <crazysim@gmail.com>"]
+name = "pty_ws"
+version = "0.1.0"
+
+[dependencies]
+nix = "0.9.0"
+nix-ptsname_r-shim = "0.1.2"
+rouille = "1.0.3"
