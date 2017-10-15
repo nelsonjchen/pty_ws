@@ -16,14 +16,7 @@ fn main() {
 
     let loop_bus_mutex = bus_mutex.clone();
     thread::spawn(move || {
-        let mut counter = 0;
-        loop {
-            thread::sleep(time::Duration::from_millis(100));
-            let mut bus = loop_bus_mutex.lock().unwrap();
-            println!("Broadcasting {}", counter);
-            bus.broadcast(counter);
-            counter += 1;
-        }
+        pty_handling_thread(loop_bus_mutex);
     });
 
     let server_bus_mutex = bus_mutex.clone();
@@ -49,7 +42,33 @@ fn main() {
     });
 }
 
-fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<u8>) {
+fn pty_handling_thread(mut bus: Arc<Mutex<Bus<Vec<u8>>>>) {
+    use nix::fcntl::O_RDWR;
+    use nix::pty::{grantpt, unlockpt};
+    use nix_ptsname_r_shim::ptsname_r;
+    let master_fd = nix::pty::posix_openpt(O_RDWR).unwrap();
+    grantpt(&master_fd).unwrap();
+    unlockpt(&master_fd).unwrap();
+    let slave_name = ptsname_r(&master_fd).unwrap();
+    println!("Slave name: {}", slave_name);
+
+    use std::fs::File;
+    use std::os::unix::io::{FromRawFd, AsRawFd};
+    use std::io::prelude::*;
+
+    let mut file = unsafe {
+        File::from_raw_fd(master_fd.as_raw_fd())
+    };
+    let mut buffer = [0; 1024];
+    loop {
+        let read = file.read(&mut buffer).unwrap();
+        let mut broadcast_slice = Vec::new();
+        broadcast_slice.extend_from_slice(&buffer[0..read]);
+        bus.lock().unwrap().broadcast(broadcast_slice);
+    }
+}
+
+fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<Vec<u8>>) {
     loop {
         let data = match recv.recv() {
             Ok(d) => d,
