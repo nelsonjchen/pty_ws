@@ -5,7 +5,7 @@ extern crate nix_ptsname_r_shim;
 extern crate rouille;
 use bus::{Bus, BusReader};
 
-use std::{thread, time};
+use std::thread;
 use std::sync::{Arc, Mutex};
 
 use rouille::websocket;
