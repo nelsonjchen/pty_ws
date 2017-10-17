@@ -51,7 +51,7 @@ fn pty_handling_thread(bus: Arc<Mutex<Bus<Vec<u8>>>>) {
     unlockpt(&master_fd).unwrap();
     let slave_name = ptsname_r(&master_fd).unwrap();
     println!("Slave name: {}", slave_name);
-    // Open the slace name so it never "ends" like in openpty.
+    // Open the slave name so it never "ends" like in openpty.
     let _file = File::create(&slave_name).unwrap();
 
     use std::fs::File;
