@@ -42,7 +42,7 @@ fn main() {
     });
 }
 
-fn pty_handling_thread(mut bus: Arc<Mutex<Bus<Vec<u8>>>>) {
+fn pty_handling_thread(bus: Arc<Mutex<Bus<Vec<u8>>>>) {
     use nix::fcntl::O_RDWR;
     use nix::pty::{grantpt, unlockpt};
     use nix_ptsname_r_shim::ptsname_r;
@@ -51,14 +51,14 @@ fn pty_handling_thread(mut bus: Arc<Mutex<Bus<Vec<u8>>>>) {
     unlockpt(&master_fd).unwrap();
     let slave_name = ptsname_r(&master_fd).unwrap();
     println!("Slave name: {}", slave_name);
+    // Open the slace name so it never "ends" like in openpty.
+    let _file = File::create(&slave_name).unwrap();
 
     use std::fs::File;
-    use std::os::unix::io::{FromRawFd, AsRawFd};
+    use std::os::unix::io::{AsRawFd, FromRawFd};
     use std::io::prelude::*;
 
-    let mut file = unsafe {
-        File::from_raw_fd(master_fd.as_raw_fd())
-    };
+    let mut file = unsafe { File::from_raw_fd(master_fd.as_raw_fd()) };
     let mut buffer = [0; 1024];
     loop {
         let read = file.read(&mut buffer).unwrap();
