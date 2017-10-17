@@ -11,6 +11,17 @@ use std::sync::{Arc, Mutex};
 use rouille::websocket;
 use rouille::Response;
 
+#[macro_use]
+extern crate serde_derive;
+
+extern crate serde;
+extern crate serde_json;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct PtyPacket {
+    data: Vec<u8>,
+}
+
 fn main() {
     let bus_mutex = Arc::new(Mutex::new(Bus::new(5)));
 
@@ -42,7 +53,7 @@ fn main() {
     });
 }
 
-fn pty_handling_thread(bus: Arc<Mutex<Bus<Vec<u8>>>>) {
+fn pty_handling_thread(bus: Arc<Mutex<Bus<PtyPacket>>>) {
     use nix::fcntl::O_RDWR;
     use nix::pty::{grantpt, unlockpt};
     use nix_ptsname_r_shim::ptsname_r;
@@ -64,17 +75,18 @@ fn pty_handling_thread(bus: Arc<Mutex<Bus<Vec<u8>>>>) {
         let read = file.read(&mut buffer).unwrap();
         let mut broadcast_slice = Vec::new();
         broadcast_slice.extend_from_slice(&buffer[0..read]);
-        bus.lock().unwrap().broadcast(broadcast_slice);
+        bus.lock().unwrap().broadcast(PtyPacket{ data: broadcast_slice });
     }
 }
 
-fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<Vec<u8>>) {
+fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<PtyPacket>) {
     loop {
         let data = match recv.recv() {
             Ok(d) => d,
             _ => break,
         };
-        match websocket.send_text(&format!("{:?}", data)) {
+        let serialized = serde_json::to_string(&data).unwrap();
+        match websocket.send_text(&serialized) {
             Ok(_) => {}
             _ => {
                 println!("Got dropped");
