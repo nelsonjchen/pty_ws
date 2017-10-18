@@ -9,7 +9,6 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 
 use rouille::websocket;
-use rouille::Response;
 
 #[macro_use]
 extern crate serde_derive;
@@ -22,22 +21,20 @@ struct PtyPacket {
     data: Vec<u8>,
 }
 
+use rouille::Response;
+extern crate filetime;
+extern crate time;
+
 fn main() {
     let bus_mutex = Arc::new(Mutex::new(Bus::new(5)));
 
     let loop_bus_mutex = bus_mutex.clone();
-    thread::spawn(move || {
-        pty_handling_thread(loop_bus_mutex);
-    });
+    thread::spawn(move || { pty_handling_thread(loop_bus_mutex); });
 
     let server_bus_mutex = bus_mutex.clone();
     println!("Now listening on 127.0.0.1:8000");
     rouille::start_server("127.0.0.1:8000", move |request| {
         router!(request,
-            (GET) (/) => {
-                Response::empty_404()
-            },
-
             (GET) (/ws) => {
                 let (response, websocket) = try_or_400!(websocket::start(&request, None::<&str>));
                 let request_mutex = server_bus_mutex.clone();
@@ -48,7 +45,24 @@ fn main() {
                 });
                 response
             },
-            _ => rouille::Response::empty_404()
+            (GET) (/) => {
+                // Extracted from match_assets
+                use std::fs;
+                let potential_file = "public/index.html";
+                let etag: String = (fs::metadata(&potential_file)
+                    .map(|meta| filetime::FileTime::from_last_modification_time(&meta)
+                    .seconds_relative_to_1970())
+                    .unwrap_or(time::now().tm_nsec as u64)
+                    ^ 0xd3f40305c9f8e911u64).to_string();
+
+                let file = match fs::File::open(&potential_file) {
+                    Ok(f) => f,
+                    Err(_) => return Response::empty_404(),
+                };
+                Response::from_file("text/html; charset=utf8", file)
+                .with_etag(request, etag).with_public_cache(3600)
+            },
+            _ => rouille::match_assets(&request, "public")
         )
     });
 }
@@ -75,7 +89,9 @@ fn pty_handling_thread(bus: Arc<Mutex<Bus<PtyPacket>>>) {
         let read = file.read(&mut buffer).unwrap();
         let mut broadcast_slice = Vec::new();
         broadcast_slice.extend_from_slice(&buffer[0..read]);
-        bus.lock().unwrap().broadcast(PtyPacket{ data: broadcast_slice });
+        bus.lock().unwrap().broadcast(
+            PtyPacket { data: broadcast_slice },
+        );
     }
 }
 
