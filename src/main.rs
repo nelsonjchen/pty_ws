@@ -3,27 +3,27 @@ extern crate nix;
 extern crate nix_ptsname_r_shim;
 #[macro_use]
 extern crate rouille;
+
+extern crate filetime;
+extern crate time;
+
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
 use bus::{Bus, BusReader};
 
 use std::thread;
 use std::sync::{Arc, Mutex};
 
 use rouille::websocket;
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_json;
+use rouille::Response;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PtyPacket {
     data: Vec<u8>,
 }
-
-use rouille::Response;
-extern crate filetime;
-extern crate time;
 
 fn main() {
     let bus_mutex = Arc::new(Mutex::new(Bus::new(5)));
