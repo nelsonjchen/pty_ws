@@ -21,8 +21,8 @@ use rouille::websocket;
 use rouille::Response;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct PtyPacket {
-    data: Vec<u8>,
+enum WsPacket{
+    PtyData(Vec<u8>)
 }
 
 fn main() {
@@ -67,7 +67,7 @@ fn main() {
     });
 }
 
-fn pty_handling_thread(bus: Arc<Mutex<Bus<PtyPacket>>>) {
+fn pty_handling_thread(bus: Arc<Mutex<Bus<WsPacket>>>) {
     use nix::fcntl::O_RDWR;
     use nix::pty::{grantpt, unlockpt};
     use nix_ptsname_r_shim::ptsname_r;
@@ -90,12 +90,12 @@ fn pty_handling_thread(bus: Arc<Mutex<Bus<PtyPacket>>>) {
         let mut broadcast_slice = Vec::new();
         broadcast_slice.extend_from_slice(&buffer[0..read]);
         bus.lock().unwrap().broadcast(
-            PtyPacket { data: broadcast_slice },
+            WsPacket::PtyData(broadcast_slice)
         );
     }
 }
 
-fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<PtyPacket>) {
+fn websocket_handling_thread(mut websocket: websocket::Websocket, mut recv: BusReader<WsPacket>) {
     loop {
         let data = match recv.recv() {
             Ok(d) => d,
