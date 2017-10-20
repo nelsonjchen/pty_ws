@@ -1,7 +1,6 @@
 
 var path = require('path')
 var webpack = require('webpack')
-var HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: './src/index.ts',
@@ -50,9 +49,7 @@ module.exports = {
     }
   },
   devServer: {
-    historyApiFallback: {
-      index: path.resolve(__dirname, './dist/index.html')
-    },
+    historyApiFallback: true,
     noInfo: true
   },
   performance: {
@@ -60,11 +57,6 @@ module.exports = {
   },
   devtool: '#eval-source-map',
   plugins: [
-    new HtmlWebpackPlugin({
-      filename: 'index.html',
-      template: 'index.html',
-      inject: true,
-    }),
   ],
 }
 

@@ -14,3 +14,5 @@ const v = new Vue({
         HelloComponent,
     },
 });
+
+v.name = 'Mark';
