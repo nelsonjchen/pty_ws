@@ -50,7 +50,9 @@ module.exports = {
     }
   },
   devServer: {
-    historyApiFallback: true,
+    historyApiFallback: {
+      index: path.resolve(__dirname, './dist/index.html')
+    },
     noInfo: true
   },
   performance: {
