@@ -1,18 +1,24 @@
 <template>
   <div id="app">
-    <img src="./assets/logo.png">
-    <HelloWorld/>
+    <ul>
+      <li v-for="data in feed" :key="data.sequence">
+        {{ data }}
+      </li>
+    </ul>
+
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld';
 
 export default {
   name: 'app',
-  components: {
-    HelloWorld,
+  computed: {
+    feed() {
+      return this.$store.state.feed;
+    },
   },
+  components: {},
 };
 </script>
 

@@ -12,6 +12,7 @@ Vue.use(VueNativeSock, 'ws://localhost:8000/ws', { store, format: 'json' });
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
+  store,
   template: '<App/>',
   components: { App },
 });
